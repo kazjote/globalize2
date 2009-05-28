@@ -160,17 +160,19 @@ module Globalize
               scopes = result.key.split(".").map{|k| k.to_sym}
               key = scopes.pop
               scope = scopes.inject(data[result.locale]) do |scope, s| 
-                scope[s] = {} unless scope[s]
+                # a new scope is empty initially
+                # if its a simple string override it with a empty hash
+                scope[s] = {} unless scope[s] and scope[s].is_a?(Hash)
                 scope[s] 
               end
               
               # if we have a pluralization form and the translation key already exists add the specific pluralization form
-              if scope[key] && result.pluralization_index
+              if scope[key] && scope[key].is_a?(Hash) && result.pluralization_index
                 scope[key][result.pluralization_index] = result.text
               
               # if we have a pluralization index add the initial hash  
               elsif result.pluralization_index
-                scope[key] = { result.pluralization_index => result.text }
+                scope[key] = { result.pluralization_index.to_sym => result.text.to_s }
               
               # else we just add the simple text
               else 
