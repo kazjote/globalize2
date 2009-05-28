@@ -61,8 +61,10 @@ module Globalize
           begin
             translation = backend.translate(locale.to_sym, key, options)
             if namespace_lookup?(translation, options)
-              namespace.merge! translation
-              #return (namespace||{}).merge translation
+              return (namespace||{}).merge translation
+              #namespace ||={}
+              #namespace.merge! translation
+              #return namespace
             elsif translation
               return translation 
             end
