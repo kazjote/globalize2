@@ -59,22 +59,56 @@ module Globalize
         default = options.delete(:default)
         result = backends.inject({}) do |namespace, backend|
           begin
-            translation = backend.translate(locale.to_sym, key, options) 
+            translation = backend.translate(locale.to_sym, key, options)
             if namespace_lookup?(translation, options)
               namespace.merge! translation
+              #return (namespace||{}).merge translation
             elsif translation
               return translation 
             end
           rescue I18n::MissingTranslationData
           end
         end
+        
         result || default(locale, default, options) || raise(I18n::MissingTranslationData.new(locale, key, options))
       end
       
       def localize(locale, object, format = :default)
         backends.each do |backend|
           result = backend.localize(locale, object, format) and return result
+          #result = backend.localize(locale, object, format) rescue nil and return result
         end
+        #raise I18n::MissingTranslationData.new(locale, :"date.formats")
+      end
+      
+      #
+      # stores the translation in the first backend of the chain returning something for store_translations
+      #
+      def store_translations(locale, data)
+        backends.each do |backend|
+          result = backend.store_translations(locale, data) and return result
+        end
+      end
+      
+      def store_translation(locale, key, data, count=1)
+        backends.each do |backend|
+          backend.store_translation(locale, key, data, count) and return
+        end
+      end
+        
+      
+      def reload!
+        backends.each do |b|
+          b.reload!
+        end
+      end
+      
+      def available_locales 
+        a =[]
+        backends.each do |b|
+          a += b.available_locales
+        end
+        return a
       end
     
       protected
