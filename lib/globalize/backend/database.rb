@@ -119,7 +119,8 @@ module Globalize
         class << self
           
           def last_updated
-            self.find(:first, {:order=>"updated_at DESC"}).updated_at.strftime "%Y%m%d%H%M%S"
+            newest = self.find(:first, {:order=>"updated_at DESC"})
+            return newest.updated_at.strftime "%Y%m%d%H%M%S" if newest && newest.updated_at
           end
           
           #
