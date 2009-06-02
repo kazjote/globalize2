@@ -118,11 +118,15 @@ module Globalize
         
         class << self
           
+          def last_updated
+            self.find(:first, {:order=>"updated_at DESC"}).updated_at.strftime "%Y%m%d%H%M%S"
+          end
+          
           #
           # creates or updates an entry.
           # data may be a string or a hash with pluralization indexes as keys
           #
-          def create_or_update(locale, key, data)
+          def create_or_update(locale, key, data, pluralization_index="")
             
             locale, key = locale.to_s, key.to_s
             
@@ -132,16 +136,16 @@ module Globalize
                 if record = find_by_locale_and_key_and_pluralization_index(locale, key, pluralization_index)
                   record.update_attribute(:text, text)
                 else
-                  create :locale => locale, :key => key, :pluralization_index => pluralization_index.to_s, :text => text
+                  create :locale => locale, :key => key, :pluralization_index =>pluralization_index.to_s, :text => text
                 end
               end
             
             # create/update without pluralization
             else
-              if record = find_by_locale_and_key_and_pluralization_index(locale, key, nil)
+              if record = find_by_locale_and_key_and_pluralization_index(locale, key, pluralization_index)
                 record.update_attribute(:text, data)
               else
-                create :locale => locale, :key => key, :text => data
+                create :locale => locale, :key => key, :text => data, :pluralization_index=>pluralization_index
               end
             end
             
@@ -167,11 +171,11 @@ module Globalize
               end
               
               # if we have a pluralization form and the translation key already exists add the specific pluralization form
-              if scope[key] && scope[key].is_a?(Hash) && result.pluralization_index
+              if scope[key] && scope[key].is_a?(Hash) && !result.pluralization_index.blank?
                 scope[key][result.pluralization_index] = result.text
               
               # if we have a pluralization index add the initial hash  
-              elsif result.pluralization_index
+              elsif !result.pluralization_index.blank?
                 scope[key] = { result.pluralization_index.to_sym => result.text.to_s }
               
               # else we just add the simple text
@@ -191,7 +195,7 @@ module Globalize
             result = {}
             data.each do |row|
               #only return the simple translation if one is set 
-              return row.text unless row.pluralization_index
+              return row.text if row.pluralization_index.blank?
               result[row.pluralization_index.to_sym] = row.text
             end
             return result
