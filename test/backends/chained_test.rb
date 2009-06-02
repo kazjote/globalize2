@@ -86,12 +86,25 @@ class TranslateChainedTest < ActiveSupport::TestCase
     assert_equal 'foo from last backend', result
   end
 
-  test "looks up a namespace from all backends and merges them (if a result is a hash and no count option is present)" do
-    @first_backend.store_translations :en, {:foo => {:bar => 'bar from first backend'}}
-    @last_backend.store_translations :en, {:foo => {:baz => 'baz from last backend'}}
+  test "looks up a namespace from all backends and deep merges them (if a result is a hash and no count option is present)" do
+    @first_backend.store_translations :en, {:foo => {:bar => 'bar from first backend', :deep=>{:a=>"a", :b=>"precede"}}}
+    @last_backend.store_translations :en, {:foo => {:baz => 'baz from last backend', :deep=>{:b=>"override", :x=>"z"}}}
     result = I18n.translate :foo
-    assert_equal( {:bar => 'bar from first backend', :baz => 'baz from last backend'}, result )
+    assert_equal(
+      {:baz=>"baz from last backend",
+       :bar=>"bar from first backend",
+       :deep=>{:x=>"z", :a=>"a", :b=>"precede"}}, result )
   end
+  
+  test "return a namespace from the previous backend even if a following backend returns nil" do
+    @first_backend.store_translations :en, {:foo => {:bar => 'bar from first backend', :deep=>{:a=>"a", :b=>"b"}}}
+    @last_backend.store_translations :en, {:none=>"here"}
+    result = I18n.translate :foo
+    assert_equal(
+      {:bar=>"bar from first backend",
+       :deep=>{:a=>"a", :b=>"b"}}, result )
+  end
+  
 
   test "raises a MissingTranslationData exception if no translation was found" do
     assert_raise( I18n::MissingTranslationData ) { I18n.translate :not_here, :raise => true }

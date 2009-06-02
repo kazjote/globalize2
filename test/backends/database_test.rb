@@ -6,7 +6,7 @@ class DatabaseTest < ActiveSupport::TestCase
   def setup
     reset_db! File.expand_path(File.join(File.dirname(__FILE__), '..', 'data', 'schema.rb'))
     I18n.backend = Globalize::Backend::Database.new
-    translations = { :en => { :foo => "Foo" },
+    translations = { :en => { :foo => "Foo", :scoped=>{:hi=>"hello", :bla=>"blubber"} },
       :cz => { :bar => { :one => "one cz bar", :few => "few cz bar", :other => "other cz bar" } } }
     
     translations.each do |locale, data|
@@ -15,7 +15,11 @@ class DatabaseTest < ActiveSupport::TestCase
   end
 
   test "available locales" do
-    assert_equal [:en, :cz], I18n.available_locales
+    assert_equal [], ([:en, :cz]-I18n.available_locales)
+  end
+  
+  test "should return a whole scope" do
+    assert_equal({:hi=>"hello", :bla=>"blubber"}, I18n.translate(:scoped))
   end
   
   test "should store a single translation without a pluralization index" do    
@@ -78,9 +82,8 @@ class DatabaseTest < ActiveSupport::TestCase
   test "return flattened translations" do
     flattened = I18n.backend.flat_translations
     assert_equal(
-      { :en=>{:foo=>"Foo"},
-        :cz=>{:bar=>{:one=>"one cz bar", :other=>"other cz bar", :few=>"few cz bar"}}
-      }, flattened)
+      {:cz=>{:bar=>{:few=>"few cz bar", :one=>"one cz bar", :other=>"other cz bar"}},
+       :en=>{:"scoped.hi"=>"hello", :"scoped.bla"=>"blubber", :foo=>"Foo"}}, flattened)
   end
 
   private

@@ -55,20 +55,21 @@ module Globalize
       def translate(locale, key, options = {})
         raise I18n::InvalidLocale.new(locale) if locale.nil?
         return key.map{|k| translate locale, k, options } if key.is_a? Array
-        
         default = options.delete(:default)
-        result = backends.inject({}) do |namespace, backend|
+        
+        result = backends.inject(nil) do |namespace, backend|
           begin
             translation = backend.translate(locale.to_sym, key, options)
             if namespace_lookup?(translation, options)
-              return (namespace||{}).merge translation
-              #namespace ||={}
-              #namespace.merge! translation
-              #return namespace
+              namespace ||={}
+              # deep_merge by Stefan Rusterholz, see http://www.ruby-forum.com/topic/142809
+              merger = proc { |key, v1, v2| Hash === v1 && Hash === v2 ? v1.merge(v2, &merger) : v2 }
+              translation.merge(namespace, &merger)
             elsif translation
               return translation 
             end
           rescue I18n::MissingTranslationData
+            namespace
           end
         end
         
@@ -80,7 +81,7 @@ module Globalize
         backends.each do |backend|
           result = backend.localize(locale, object, format) rescue nil and return result
         end
-        raise I18n::MissingTranslationData.new(locale, :"date.formats")
+        #raise I18n::MissingTranslationData.new(locale, :"date.formats",{})
       end
       
       #
