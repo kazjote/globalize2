@@ -24,6 +24,13 @@ module Globalize
               include InstanceMethods
               extend  ClassMethods
               
+              class << self
+                alias_method_chain :find, :translations
+                alias_method :all_attributes_exists_without_translations?, :all_attributes_exists?
+                alias_method :all_attributes_exists?, :all_attributes_exists_with_translations?
+                
+              end
+              
               self.globalize_proxy = Globalize::Model::ActiveRecord.create_proxy_class(self)
               has_many(
                 :globalize_translations,
@@ -67,15 +74,48 @@ module Globalize
         end
         
         module ClassMethods          
-          def method_missing(method, *args)
-            if method.to_s =~ /^find_by_(\w+)$/ && globalize_options[:translated_attributes].include?($1.to_sym)
-              find(:first, :joins => :globalize_translations,
-                   :conditions => [ "#{i18n_attr($1)} = ? AND #{i18n_attr('locale')} IN (?)",
-                                   args.first,I18n.fallbacks[I18n.locale].map{|tag| tag.to_s}])
-            else
-              super
+          
+          #
+          # This method hooks before the AR finder.
+          # If conditions with translated attributes are given:
+          # => Join translation table
+          # => Rewrite conditions accordingly
+          # 
+          def find_with_translations(*args)
+            options = args.extract_options!
+            
+            if ( !translation_in_table? && options && options[:conditions] && options[:conditions].is_a?(Hash))
+              translated_conditions = {}
+              
+              options[:conditions].delete_if {|key, value| 
+                if globalize_options[:translated_attributes].include?(key.to_sym)
+                   translated_conditions[i18n_attr(key)] = value
+                   true
+                end
+              }
+              
+              unless translated_conditions.empty?
+                options[:joins] = ((options[:joins]).to_a) << :globalize_translations
+                sql = sanitize_sql_hash_for_conditions(options[:conditions].merge(translated_conditions))
+                sql += " AND #{i18n_attr('locale')} IN (?)"
+                conditions = [sql, I18n.fallbacks[I18n.locale].map{|tag| tag.to_s} ]
+                options[:conditions] = conditions
+              end
             end
+            newargs = args.push(options)
+            return find_without_translations(*newargs)
           end
+          
+          # 
+          # This method hooks before the AR all_attributes_exists? method
+          # globalized attributes are removed from the check. 
+          # So they seem to be existing for the object even if just existing in the associated translation
+          # 
+          def all_attributes_exists_with_translations?(attribute_names)
+            attribute_names = attribute_names.to_a.map( &:to_sym) - globalize_options[:translated_attributes]
+            return all_attributes_exists_without_translations?(attribute_names)
+          end
+          
                     
           def create_translation_table!(fields)
             translated_fields = self.globalize_options[:translated_attributes]
@@ -106,11 +146,17 @@ module Globalize
             self.connection.drop_table translation_table_name
           end
           
+          def translation_in_table?
+            #I18n.locale == I18n.default_locale
+            false 
+          end
+          
           private
           
           def i18n_attr(attribute_name)
             self.base_class.name.underscore + "_translations.#{attribute_name}"
-          end          
+          end
+                    
         end
         
         module InstanceMethods
@@ -137,6 +183,8 @@ module Globalize
           def translated_locales
             globalize_translations.scoped(:select => 'DISTINCT locale').map {|gt| gt.locale.to_sym }
           end
+          
+          # creates or updates associated translations
           
           def set_translations options
             options.keys.each do |key|
