@@ -154,7 +154,7 @@ module Globalize
 
           # loads all translation data from database
           def load_all_entries
-            results = self.all :order=>"'locale', 'key'"
+            results = self.all :order=>"locale, key"
             data = {}
 
             results.each do |result|
