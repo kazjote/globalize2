@@ -14,6 +14,10 @@ class DatabaseTest < ActiveSupport::TestCase
     end
   end
 
+  test "translate" do
+   assert_equal("Foo", I18n.translate(:foo))
+  end
+
   test "available locales" do
     assert_equal [], ([:en, :cz]-I18n.available_locales)
   end

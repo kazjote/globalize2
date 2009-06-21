@@ -28,7 +28,7 @@ module Globalize
         end
         Translation.create_or_update(locale, key, data)
         # merge the stored translation back to the memory collection
-        merge_translations(locale, { key => Translation.load_entry(locale, key) })
+        reload!
       end
 
       def available_locales
@@ -37,6 +37,7 @@ module Globalize
 
       def flat_translations
         flattened = {}
+        load_translations if translations.empty?
         translations.each{|locale, values|
           flattened[locale] = flatten values
         }
