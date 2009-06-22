@@ -3,7 +3,7 @@ require 'globalize/backend/static'
 
 module Globalize
   module Backend
-    class Database < Static
+    class Database < Pluralizing
 
       # Loads all available translations from db and merge them into the already loaded translations
       def load_translations(*args)
@@ -43,6 +43,13 @@ module Globalize
         }
         flattened
       end
+
+#      def translate(*args)
+#        require 'ruby-debug'
+#        Debugger.start
+#        debugger
+#        super
+#      end
 
       protected
 
@@ -202,8 +209,6 @@ module Globalize
             end
             return result
           end
-
-
         end
       end
     end

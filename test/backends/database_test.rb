@@ -27,13 +27,13 @@ class DatabaseTest < ActiveSupport::TestCase
   end
 
   test "should store a single translation without a pluralization index" do
-    assert_equal "translation missing: en-US, world", I18n.translate(:world)
+    assert_equal "translation missing: en, world", I18n.translate(:world)
     I18n.backend.store_translation :en, :world, "World"
     assert_equal "World", I18n.translate(:world)
   end
 
   test "should store single translations with pluralization indexes" do
-    assert_equal "translation missing: en-US, girl", I18n.translate(:girl)
+    assert_equal "translation missing: en, girl", I18n.translate(:girl)
     I18n.backend.store_translation :en, :girl, "One girl", 1
     I18n.backend.store_translation :en, :girl, "Many girls", 5
     assert_equal "One girl", I18n.translate(:girl)
@@ -81,14 +81,9 @@ class DatabaseTest < ActiveSupport::TestCase
     assert_equal "home!!", I18n.translate(:home, :scope => :scoped)
   end
 
-  test "returns an instance of Translation::Static" do
-    translation = I18n.translate :foo
-    assert_instance_of Globalize::Translation::Static, translation
-  end
-
   test "returns error message for missing translation" do
     message = I18n.translate :foz
-    assert_equal "translation missing: en-US, foz", message
+    assert_equal "translation missing: en, foz", message
   end
 
   test "raise exception on missing translation" do
